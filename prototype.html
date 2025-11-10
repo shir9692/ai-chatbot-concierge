@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OpenArms AI — Concierge Prototype</title>
+  <style>
+    :root{
+      --bg:#f7fbff; --card:#ffffff; --accent:#0b67ff; --muted:#6b7280;
+      --radius:12px; --shadow: 0 10px 30px rgba(11,103,255,0.08);
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#eef6ff);color:#0f1724;line-height:1.4}
+    header{display:flex;align-items:center;justify-content:space-between;padding:20px 36px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#2b9bff);
+      display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;
+      box-shadow:0 6px 18px rgba(11,103,255,0.18)
+    }
+    nav a{margin-left:18px;color:var(--muted);text-decoration:none;font-weight:600}
+    main{max-width:1200px;margin:24px auto;padding:0 24px}
+    .hero{display:flex;gap:32px;align-items:center}
+    .hero-card{flex:1;background:var(--card);padding:28px;border-radius:16px;box-shadow:var(--shadow)}
+    .hero h1{margin:0 0 8px;font-size:28px}
+    .hero p{margin:0;color:var(--muted)}
+    .cta-row{margin-top:18px;display:flex;gap:12px;align-items:center}
+    .btn{background:var(--accent);color:white;padding:10px 16px;border-radius:10px;border:0;font-weight:600;cursor:pointer}
+    .btn.ghost{background:transparent;color:var(--accent);border:1px solid rgba(11,103,255,0.12)}
+    .features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}
+    .feature{background:linear-gradient(180deg,white,#f9fbff);padding:14px;border-radius:12px;border:1px solid #e6f0ff}
+    .mock-admin{margin-top:20px;background:linear-gradient(180deg,#fff,#fbfdff);padding:16px;border-radius:12px;border:1px dashed #dbeefd}
+    /* Chatbot */
+    .chat-launcher{position:fixed;right:24px;bottom:24px;z-index:80}
+    .bubble{width:64px;height:64px;border-radius:999px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;box-shadow:0 12px 30px rgba(11,103,255,0.22);cursor:pointer}
+    .chat-window{position:fixed;right:24px;bottom:100px;width:380px;max-height:70vh;background:var(--card);border-radius:14px;box-shadow:0 20px 60px rgba(9,30,66,0.12);overflow:hidden;display:flex;flex-direction:column;z-index:90}
+    .chat-header{padding:12px 14px;background:linear-gradient(90deg,var(--accent),#2b9bff);color:white;display:flex;align-items:center;gap:10px}
+    .chat-header .title{font-weight:700}
+    .chat-body{padding:12px;flex:1;overflow:auto;background:linear-gradient(180deg,#f7fbff,transparent)}
+    .msg{max-width:78%;padding:10px 12px;border-radius:12px;margin:8px 0;display:inline-block;clear:both}
+    .msg.bot{background:#eef6ff;color:#02204a;align-self:flex-start}
+    .msg.user{background:#0b67ff;color:white;align-self:flex-end;margin-left:auto}
+    .suggests{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+    .chip{background:#f1f6ff;padding:6px 10px;border-radius:999px;font-weight:600;color:var(--accent);cursor:pointer;border:1px solid rgba(11,103,255,0.08)}
+    .composer{padding:12px;border-top:1px solid #eef6ff;display:flex;gap:8px;align-items:center}
+    .input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid #e6eefb}
+    .meta{font-size:12px;color:var(--muted);margin-top:8px}
+    .consent{position:fixed;left:50%;transform:translateX(-50%);bottom:110px;background:var(--card);padding:12px 16px;border-radius:10px;box-shadow:0 8px 30px rgba(9,30,66,0.08)}
+    .consent button{margin-left:8px}
+    /* survey */
+    .survey{padding:12px;border-radius:10px;background:#fff7f0;border:1px solid #ffe6d0;margin-top:8px}
+    /* responsive */
+    @media (max-width:720px){
+      header{padding:14px}
+      .hero{flex-direction:column}
+      .features{grid-template-columns:repeat(2,1fr)}
+      .chat-window{right:12px;left:12px;width:auto;bottom:90px}
+    }
+    @media (max-width:420px){
+      .features{grid-template-columns:repeat(1,1fr)}
+      .chat-window{bottom:80px}
+      .logo{width:40px;height:40px}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">OA</div>
+      <div>
+        <div style="font-weight:800">OpenArms AI</div>
+        <div style="font-size:12px;color:var(--muted)">Travel & Hospitality Concierge (v1 prototype)</div>
+      </div>
+    </div>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#admin">Admin</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-card">
+        <h1>AI Concierge for hotel guests & travelers</h1>
+        <p>Ask about check-in times, room service, nearby restaurants, and local attractions. Built to run on Azure student free tier with privacy-first defaults.</p>
+        <div class="cta-row">
+          <button class="btn" id="open-chat">Open Chat</button>
+          <button class="btn ghost" id="view-admin">Admin Portal (mock)</button>
+          <div style="margin-left:auto;text-align:right">
+            <div style="font-weight:700">MVP: 5–7 intents</div>
+            <div class="meta">Responds <strong>&lt;3s</strong>, default answers &lt;4 sentences</div>
+          </div>
+        </div>
+
+        <div class="features" style="margin-top:20px">
+          <div class="feature">
+            <strong>Hotel FAQs</strong>
+            <div class="meta">Check-in/out, Wi‑Fi, amenities — QnA dataset (10–15)</div>
+          </div>
+          <div class="feature">
+            <strong>Local suggestions</strong>
+            <div class="meta">Top nearby restaurants & attractions via OpenStreetMap</div>
+          </div>
+          <div class="feature">
+            <strong>Translation</strong>
+            <div class="meta">On‑demand translation for common phrases</div>
+          </div>
+        </div>
+
+        <div class="mock-admin" id="admin">
+          <strong>Admin summary (mock)</strong>
+          <div style="display:flex;gap:12px;margin-top:8px">
+            <div style="flex:1">
+              <div style="font-size:22px;font-weight:700">24</div>
+              <div class="meta">sessions (last 24h)</div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:22px;font-weight:700">18</div>
+              <div class="meta">unique users</div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:22px;font-weight:700">Top: Paris</div>
+              <div class="meta">Top 5 destinations</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="width:420px">
+        <img alt="device-mock" src="data:image/svg+xml;utf8,
+        <svg xmlns='http://www.w3.org/2000/svg' width='420' height='320'>
+          <rect rx='18' width='420' height='320' fill='%23ffffff' stroke='%23e6f0ff' />
+          <text x='28' y='48' font-family='Inter,Arial' font-size='16' fill='%230b67ff'>Chat Preview</text>
+          <rect x='24' y='64' width='372' height='220' rx='10' fill='%23f7fbff' stroke='%23e8f4ff' />
+          <text x='40' y='96' font-size='12' fill='%230b67ff'>Open arms concierge</text>
+          <rect x='40' y='110' width='320' height='20' rx='8' fill='%23eef6ff' />
+          <text x='48' y='125' font-size='11' fill='%2302244a'>Welcome! How can I help you today?</text>
+        </svg>" style="width:100%;border-radius:12px;box-shadow:var(--shadow)" />
+      </div>
+    </section>
+
+    <section style="margin-top:20px">
+      <h3 id="how">How it works</h3>
+      <p class="meta">Intent detection: LUIS or Azure OpenAI (free credits). Knowledge base: QnA Maker or JSON. Maps: OpenStreetMap. Deployment: Azure App Service (free) or local emulator.</p>
+    </section>
+  </main>
+
+  <!-- Consent banner for location -->
+  <div id="consent" class="consent" role="dialog" aria-live="polite" style="display:none">
+    OpenArms AI wants to use your location to show nearby attractions. Allow sharing of location for this session?
+    <div style="margin-top:8px;text-align:right">
+      <button onclick="denyLocation()" class="btn ghost">Deny</button>
+      <button onclick="allowLocation()" class="btn">Allow</button>
+    </div>
+  </div>
+
+  <!-- Chat launcher -->
+  <div class="chat-launcher">
+    <div class="bubble" id="launcher" title="Open Concierge">Hi</div>
+  </div>
+
+  <!-- Chat window (hidden initially) -->
+  <div id="chat" class="chat-window" style="display:none" aria-hidden="true">
+    <div class="chat-header">
+      <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center">OA</div>
+      <div>
+        <div class="title">OpenArms Concierge</div>
+        <div style="font-size:12px;opacity:.9">Polite, helpful assistant · Azure student tier</div>
+      </div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button onclick="closeChat()" style="background:transparent;border:0;color:white;cursor:pointer">✕</button>
+      </div>
+    </div>
+    <div id="body" class="chat-body" tabindex="0" role="log" aria-live="polite">
+      <div class="msg bot" id="g1">Hello — I'm your concierge. I can answer hotel FAQs, suggest local restaurants & attractions, help with translation, or request room service. How can I help you today?</div>
+      <div class="suggests">
+        <div class="chip" onclick="userSay('What time is check-in?')">Check‑in time</div>
+        <div class="chip" onclick="userSay('Nearby restaurants')">Nearby restaurants</div>
+        <div class="chip" onclick="userSay('Room service menu')">Room service</div>
+      </div>
+
+      <!-- survey example (hidden initially) -->
+      <div id="survey" style="display:none" class="survey">
+        How was the recommendation? <button class="chip" onclick="survey('Good')">Good</button> <button class="chip" onclick="survey('Okay')">Okay</button> <button class="chip" onclick="survey('Bad')">Bad</button>
+      </div>
+    </div>
+
+    <div class="composer">
+      <input id="input" class="input" placeholder="Ask about Wi‑Fi, restaurants, transport..." onkeydown="if(event.key==='Enter'){sendMsg()}"/>
+      <button class="btn" onclick="sendMsg()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const launcher=document.getElementById('launcher');
+    const chat=document.getElementById('chat');
+    const body=document.getElementById('body');
+    const input=document.getElementById('input');
+    const consentBanner=document.getElementById('consent');
+    let locationAllowed=false;
+
+    function openChat(){
+      chat.style.display='flex';
+      chat.setAttribute('aria-hidden','false');
+      body.scrollTop = body.scrollHeight;
+      // show consent if not yet decided
+      if(!locationAllowed) consentBanner.style.display='block';
+    }
+    function closeChat(){
+      chat.style.display='none';
+      chat.setAttribute('aria-hidden','true');
+    }
+    launcher.onclick=()=>{
+      if(chat.style.display==='flex') closeChat(); else openChat();
+    };
+    document.getElementById('open-chat').onclick=openChat;
+    document.getElementById('view-admin').onclick=()=>{window.location.hash='#admin';alert('Admin portal is a mock in this prototype.');};
+
+    function allowLocation(){
+      locationAllowed=true;
+      consentBanner.style.display='none';
+      appendBot('Thanks — I will use your location to find nearby places. Example: showing top 3 attractions near you.');
+    }
+    function denyLocation(){
+      locationAllowed=false;
+      consentBanner.style.display='none';
+      appendBot('No problem — I will default to the hotel area or destination city you provide.');
+    }
+
+    function appendBot(text){
+      const d=document.createElement('div');
+      d.className='msg bot';
+      d.textContent=text;
+      body.appendChild(d);
+      body.scrollTop = body.scrollHeight;
+    }
+    function appendUser(text){
+      const d=document.createElement('div');
+      d.className='msg user';
+      d.textContent=text;
+      body.appendChild(d);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function sendMsg(){
+      const txt=input.value.trim();
+      if(!txt) return;
+      appendUser(txt);
+      input.value='';
+      simulateBotResponse(txt);
+    }
+    function userSay(txt){
+      appendUser(txt);
+      simulateBotResponse(txt);
+    }
+
+    function simulateBotResponse(userText){
+      // basic intent recognition by keywords (prototype only)
+      const lower=userText.toLowerCase();
+      showTyping();
+      setTimeout(()=>{ hideTyping();
+        if(lower.includes('check')||lower.includes('check-in')||lower.includes('check in')){
+          appendBot('Standard check‑in is 3:00 PM and check‑out is 11:00 AM. Early check‑in may be available on request—would you like me to request early check‑in for you?');
+          showSurveyPrompt();
+        } else if(lower.includes('restaurant')||lower.includes('dinner')||lower.includes('food')){
+          if(locationAllowed) appendBot('Here are top 3 restaurants within 2km: • La Terrace (French) • Osteria Verde (Italian) • Spice Corner (Local). Would you like directions or to reserve a table?');
+          else appendBot('I don’t have your location. Please allow location or tell me the city/hotel name and I’ll suggest nearby restaurants.');
+        } else if(lower.includes('room service')||lower.includes('menu')){
+          appendBot('Room service is available 7:00–22:30. Today’s specials: Grilled salmon, Vegan Buddha bowl. Want to place an order?');
+        } else if(lower.includes('translate')||lower.includes('translation')){
+          appendBot('Sure — tell me the phrase and target language (e.g., "Translate: Good morning → Spanish").');
+        } else if(lower.includes('thank')||lower.includes('bye')){
+          appendBot('You’re welcome — have a great stay! If you need anything else, just ask.');
+        } else if(lower.includes('transport')||lower.includes('taxi')||lower.includes('uber')){
+          appendBot('You can book a taxi through the reception or use local ride apps. Would you like estimated fare to the airport?');
+        } else {
+          appendBot('I’m sorry — can you clarify whether this is about the hotel, local attractions, dining, or transportation?');
+        }
+      }, 800 + Math.random()*900); // simulates <3s response
+    }
+
+    function showTyping(){
+      const t=document.createElement('div');
+      t.className='msg bot';
+      t.id='typing';
+      t.innerHTML='<span style="opacity:.8">Typing<span style="opacity:.5">...</span></span>';
+      body.appendChild(t);
+      body.scrollTop = body.scrollHeight;
+    }
+    function hideTyping(){
+      const t=document.getElementById('typing');
+      if(t) t.remove();
+    }
+    function showSurveyPrompt(){
+      const s=document.getElementById('survey');
+      s.style.display='block';
+    }
+    function survey(ans){
+      appendUser('Survey: '+ans);
+      document.getElementById('survey').style.display='none';
+      appendBot('Thanks for the feedback — this helps build your taste profile.');
+    }
+
+    // keyboard accessibility: open chat with Enter when launcher focused
+    launcher.setAttribute('tabindex','0');
+    launcher.addEventListener('keydown', (e)=>{ if(e.key==='Enter') launcher.click(); });
+
+    // small initial focus
+    //body.focus();
+
+  </script>
+</body>
+</html>

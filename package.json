@@ -1,0 +1,15 @@
+{
+  "name": "ai-concierge-mvp",
+  "version": "0.1.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.7",
+    "fuse.js": "^6.6.2"
+  }
+}
