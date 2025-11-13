@@ -1,0 +1,42 @@
+[
+  {
+    "question": "what time is check-in",
+    "answer": "Check-in is at 3:00 PM. Early check-in is subject to availability; would you like me to request that?"
+  },
+  {
+    "question": "what time is check-out",
+    "answer": "Check-out is at 11:00 AM. Need a late check-out?"
+  },
+  {
+    "question": "how do i connect to wifi",
+    "answer": "Wi‑Fi network: HotelGuest. No password required on the lobby network. For in-room Wi‑Fi use your room number as password."
+  },
+  {
+    "question": "is breakfast included",
+    "answer": "Breakfast is included for standard bookings from 7:00–10:30 AM in the dining area. Room service breakfast is available for a fee."
+  },
+  {
+    "question": "how to order room service",
+    "answer": "To order room service, tell me what you'd like and your room number. Or call extension 100."
+  },
+  {
+    "question": "do you have a gym",
+    "answer": "Yes, the gym is open 6:00–22:00 and is located on the 2nd floor."
+  },
+  {
+    "question": "is there parking",
+    "answer": "We offer limited on-site parking; overnight parking is $10/night. Valet is available 24/7."
+  },
+  {
+    "question": "can you store my luggage",
+    "answer": "Yes — luggage storage at the front desk is complimentary for guests."
+  },
+  {
+    "question": "do you allow pets",
+    "answer": "We allow small pets with a one-time cleaning fee. Please confirm your pet type and weight."
+  },
+  {
+    "question": "how do i get to the airport",
+    "answer": "Taxi to the airport takes about 30–45 minutes depending on traffic. We can book a shuttle or call a taxi for you."
+  }
+]

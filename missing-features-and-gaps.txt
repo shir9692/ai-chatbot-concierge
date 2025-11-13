@@ -1,0 +1,113 @@
+OpenArms AI — Missing features / Gaps (mapped to design doc)
+Date: 2025-10-31
+Prepared for: IMT-598C Project Assignment 3 — OpenArms AI
+
+1) Authentication & Session Management
+   - Missing: Sign-in / sign-up flows for guests and staff.
+   - Gap: SSO (OAuth/SAML) / Guest account linking (room number + reservation code).
+   - Impact: Needed for personalized profiles, taste profile persistence and admin user controls.
+   - Priority: High
+
+2) Precise Data Retention & Privacy Implementation
+   - Missing: Concrete retention policy implementation (where and how to delete session logs).
+   - Gap: Automated deletion job and UI to request data export/delete for GDPR/CCPA.
+   - Impact: Compliance risk.
+   - Priority: High
+
+3) Consent Capture & Audit Trail
+   - Missing: Persistent consent records, consent UI when bot stores survey responses or location.
+   - Gap: Server-side logging of consent with timestamps.
+   - Priority: High
+
+4) Knowledge base management workflow
+   - Missing: Admin UI to edit FAQ JSON or QnA Maker dataset, versioning, publishing workflow.
+   - Gap: How updates propagate to runtime (cache invalidation).
+   - Priority: High
+
+5) Human Handoff & Escalation Rules
+   - Missing: Clear criteria and implementation for escalating to human staff (live chat or ticket creation).
+   - Gap: Integration with helpdesk (Zendesk/ServiceNow) or email routing.
+   - Priority: High
+
+6) Rate limiting, concurrency & queuing
+   - Missing: Enforcement mechanisms for 50 concurrent sessions and later scale to 500/5000.
+   - Gap: Request queue design, per-user session locking and polite rejection message.
+   - Priority: High
+
+7) Security & Secrets Management
+   - Missing: Concrete Key Vault integration, secret rotation automation (90-day rotation schedule).
+   - Gap: CI/CD secret handling, and access controls for developers.
+   - Priority: High
+
+8) PII handling & masking
+   - Missing: Server-side PII redaction rules and input sanitization pipeline.
+   - Gap: Detection rules and retention exceptions for allowed PII.
+   - Priority: High
+
+9) Offline & Error States
+   - Missing: UX for offline bot or degraded service (e.g., queue a request, capture email).
+   - Gap: Graceful fallback and retry logic.
+   - Priority: Medium
+
+10) Analytics & Observability
+    - Missing: Metrics definitions, instrumentation (telemetry), and dashboards for:
+       - sessions/day, resolution rate, NPS, top intents, errors
+    - Gap: Storage and retention of logs (cost planning).
+    - Priority: Medium
+
+11) Safety / Moderation
+    - Missing: Profanity filter or unsafe content detection pipeline.
+    - Gap: Policy and automated action for abusive inputs.
+    - Priority: Medium
+
+12) Integrations & APIs
+    - Missing: Implementations for OpenStreetMap calls, Azure LUIS/OpenAI connectors, QnA Maker endpoints, and ticketing APIs.
+    - Gap: Rate-limit handling for external APIs and caching strategy for location queries.
+    - Priority: Medium
+
+13) Accessibility & Localization
+    - Missing: Screen-reader tests, high-contrast theme, keyboard UX, and multi-language fallback.
+    - Gap: ARIA attributes coverage and translation workflow for localized content.
+    - Priority: Medium
+
+14) Testing & CI/CD
+    - Missing: Automated tests (unit, integration, e2e), staging deployment on free-tier or local pipelines.
+    - Gap: Canary/rollback process for knowledge base updates.
+    - Priority: Medium
+
+15) Admin Portal Features
+    - Missing: User/session list, ability to view transcripts, export analytics, configure intents and FAQs.
+    - Gap: Role-based access, audit logs for admin actions.
+    - Priority: Medium
+
+16) Billing / Cost Control
+    - Missing: Monitoring for free-tier consumption, alerts for hitting limits of Azure student credits.
+    - Gap: Budget guardrails and fallback to local or degraded mode if credits exhausted.
+    - Priority: Medium
+
+17) Data Model & Persistence
+    - Missing: Schema for sessions, taste profiles, user preferences, and transcripts.
+    - Gap: Where to persist (Azure Table, Cosmos DB, or file store) and backup strategy.
+    - Priority: Medium
+
+18) Response Quality Constraints
+    - Missing: Enforcement to keep default responses under four sentences (server-side prompt templates).
+    - Gap: Prompt engineering controls, token limit enforcement (if using OpenAI).
+    - Priority: Low
+
+19) Rollback & Recovery
+    - Missing: Concrete rollback procedure in event of knowledge-base corruption.
+    - Gap: Versioned backups and restore playbook.
+    - Priority: Low
+
+20) Legal Copy & Policies
+    - Missing: In-chat links for Terms, Privacy, cookie policy, and contact for data requests.
+    - Gap: Legal review and placement in UI for consent and compliance.
+    - Priority: Low
+
+Notes & quick next steps:
+- Prioritize building consent & privacy flows, human handoff, secret management, and knowledge base editing before public testing.
+- Create a minimal integration: QnA JSON + OpenStreetMap simple REST calls + Azure Bot Service endpoint; keep all production credentials in Key Vault.
+- Instrument basic analytics (sessions, top intents, survey rating) during alpha testing to measure resolution rate and guide improvements.
+
+End of list.

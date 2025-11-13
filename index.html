@@ -1,0 +1,191 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>AI Concierge Chat (Prototype) — UI with Diagnostics</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; display:flex; height:100vh; background:#f3f4f6; }
+    #chat { width: 680px; margin: auto; border:1px solid #ddd; display:flex; flex-direction:column; background:#fff; box-shadow:0 4px 12px rgba(0,0,0,0.06); }
+    #history { flex:1; padding:12px; overflow:auto; background:#fafafa; }
+    .msg { margin:8px 0; }
+    .user { text-align:right; color:#003366 }
+    .bot { text-align:left; color:#004400 }
+    #controls { display:flex; padding:10px; border-top:1px solid #eee; align-items:center; gap:8px; }
+    input[type=text]{ flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; }
+    button{ padding:8px 12px; border-radius:4px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+    button:hover{ background:#f7f7f7; }
+    .suggestion{ background:#fff; border:1px solid #ddd; padding:8px; margin-top:6px; border-radius:4px; }
+    .meta { font-size: 0.85em; color: #666; margin-top:4px; }
+    #diagnostics { border-top:1px dashed #eee; padding:10px; font-size:0.9em; color:#333; background:#fcfcfd; }
+    #diagToggle { margin-left:8px; }
+    .label { font-weight:600; margin-right:6px; color:#222; }
+    .small { font-size:0.85em; color:#666; }
+    .row { display:flex; gap:8px; align-items:center; }
+    #rawJson { white-space: pre-wrap; background:#0f1724; color:#dbeafe; padding:8px; border-radius:4px; margin-top:8px; overflow:auto; max-height:220px; }
+    footer { padding:8px 12px; font-size:0.8em; color:#666; text-align:center; border-top:1px solid #eee; }
+  </style>
+</head>
+<body>
+  <div id="chat">
+    <div id="history"></div>
+
+    <div id="controls">
+      <input id="message" placeholder="Ask (e.g., 'Find attractions near San Francisco' or 'What time is check-out?')" />
+      <label class="small"><input type="checkbox" id="shareLocation" /> Share my location</label>
+      <button id="send">Send</button>
+      <label id="diagToggle" class="small"><input type="checkbox" id="showDiag" /> Show Diagnostics</label>
+    </div>
+
+    <div id="diagnostics" style="display:none;">
+      <div class="row"><span class="label">Client-parsed city:</span><span id="clientCity" class="small">—</span></div>
+      <div class="row"><span class="label">Payload coords:</span><span id="payloadCoords" class="small">—</span></div>
+      <div class="row"><span class="label">Server intent:</span><span id="srvIntent" class="small">—</span></div>
+      <div class="row"><span class="label">Server liveLookup:</span><span id="srvLive" class="small">—</span></div>
+      <div class="row"><span class="label">Server reply:</span><span id="srvReply" class="small">—</span></div>
+      <div id="rawJson" style="display:none"></div>
+    </div>
+
+    <footer>AI Concierge — Prototype. Diagnostics show client-side parsing and the server response (intent, liveLookup, raw JSON).</footer>
+  </div>
+
+  <script>
+    const historyEl = document.getElementById('history');
+    const inputEl = document.getElementById('message');
+    const sendBtn = document.getElementById('send');
+    const shareCheckbox = document.getElementById('shareLocation');
+    const showDiag = document.getElementById('showDiag');
+    const diagPanel = document.getElementById('diagnostics');
+    const clientCityEl = document.getElementById('clientCity');
+    const payloadCoordsEl = document.getElementById('payloadCoords');
+    const srvIntentEl = document.getElementById('srvIntent');
+    const srvLiveEl = document.getElementById('srvLive');
+    const srvReplyEl = document.getElementById('srvReply');
+    const rawJsonEl = document.getElementById('rawJson');
+
+    let cachedCoords = null;
+    const sessionId = 'session-' + Math.random().toString(36).slice(2,9);
+
+    function append(text, who='bot') {
+      const d = document.createElement('div');
+      d.className = 'msg ' + (who === 'user' ? 'user' : 'bot');
+      d.innerText = (who === 'user' ? 'You: ' : 'Bot: ') + text;
+      historyEl.appendChild(d);
+      historyEl.scrollTop = historyEl.scrollHeight;
+      return d;
+    }
+
+    function appendSuggestion(s) {
+      const el = document.createElement('div');
+      el.className = 'suggestion';
+      el.innerHTML = `<strong>${escapeHtml(s.name)}</strong> <span class="small">(${escapeHtml(s.type)})</span><div class="small">coords: ${escapeHtml(s.lat)}, ${escapeHtml(s.lon)}</div>`;
+      if (s.reason) {
+        const r = document.createElement('div');
+        r.className = 'meta';
+        r.innerText = `Reason: ${s.reason}`;
+        el.appendChild(r);
+      }
+      historyEl.appendChild(el);
+      historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    function parseCityFromText(text) {
+      const m = text.match(/near\s+([a-zA-Z\s,]+)/i);
+      if (!m) return null;
+      const candidate = m[1].trim();
+      const token = candidate.toLowerCase();
+      if (token === 'me' || token === 'here' || token === 'my hotel' || token === 'myhotel') return null;
+      return candidate;
+    }
+
+    async function getBrowserLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error('Geolocation not supported'));
+        navigator.geolocation.getCurrentPosition(pos => {
+          resolve({ lat: pos.coords.latitude.toString(), lon: pos.coords.longitude.toString() });
+        }, err => reject(err), { maximumAge: 60000, timeout: 10000 });
+      });
+    }
+
+    showDiag.addEventListener('change', () => {
+      diagPanel.style.display = showDiag.checked ? 'block' : 'none';
+      rawJsonEl.style.display = showDiag.checked ? 'block' : 'none';
+    });
+
+    async function sendMessage(text) {
+      append(text, 'user');
+      const botPlaceholder = append('…', 'bot');
+
+      // Client-side parse for display purposes
+      const clientCity = parseCityFromText(text);
+      clientCityEl.innerText = clientCity || '—';
+
+      // Location/consent handling
+      let consentLocation = false;
+      let coords = null;
+      payloadCoordsEl.innerText = '—';
+      if (shareCheckbox.checked) {
+        consentLocation = true;
+        try {
+          if (!cachedCoords) cachedCoords = await getBrowserLocation();
+          coords = cachedCoords;
+          payloadCoordsEl.innerText = `${coords.lat}, ${coords.lon}`;
+        } catch (err) {
+          shareCheckbox.checked = false;
+          consentLocation = false;
+          payloadCoordsEl.innerText = 'permission denied / unavailable';
+          botPlaceholder.innerText = 'Bot: Could not get browser location (permission denied or timeout). Sending without location.';
+        }
+      }
+
+      // Build payload (do NOT send default SampleCity)
+      const payload = { sessionId, message: text, consentLocation, coords };
+
+      try {
+        const r = await fetch('http://localhost:3000/api/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await r.json();
+
+        // update diagnostics
+        srvIntentEl.innerText = json.intent || '—';
+        srvLiveEl.innerText = json.liveLookup === undefined ? '—' : String(json.liveLookup);
+        srvReplyEl.innerText = json.reply || '—';
+        rawJsonEl.innerText = JSON.stringify(json, null, 2);
+
+        // render bot reply and suggestions
+        botPlaceholder.innerText = 'Bot: ' + (json.reply || 'Sorry, something went wrong.');
+        if (json.suggestions && json.suggestions.length) {
+          const label = document.createElement('div');
+          label.className = 'meta';
+          label.innerText = json.liveLookup ? 'Live suggestions:' : 'Hotel suggestions (live unavailable):';
+          historyEl.appendChild(label);
+          json.suggestions.forEach(s => appendSuggestion(s));
+        }
+      } catch (err) {
+        botPlaceholder.innerText = 'Bot: Error contacting server';
+        rawJsonEl.innerText = String(err && err.message ? err.message : err);
+      }
+    }
+
+    sendBtn.onclick = () => {
+      const t = inputEl.value.trim();
+      if (!t) return;
+      sendMessage(t);
+      inputEl.value = '';
+    };
+
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+
+    // initial greeting
+    append('Hello — welcome! How can I help you today?');
+  </script>
+</body>
+</html>

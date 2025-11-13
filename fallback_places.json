@@ -1,0 +1,23 @@
+[
+  {
+    "name": "City Museum",
+    "lat": "0.0000",
+    "lon": "0.0000",
+    "type": "museum",
+    "reason": "historic"
+  },
+  {
+    "name": "Main Square",
+    "lat": "0.0000",
+    "lon": "0.0000",
+    "type": "square",
+    "reason": "scenic"
+  },
+  {
+    "name": "Riverside Park",
+    "lat": "0.0000",
+    "lon": "0.0000",
+    "type": "park",
+    "reason": "relaxing"
+  }
+]
