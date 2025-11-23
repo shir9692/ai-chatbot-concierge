@@ -1,0 +1,349 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>AI Concierge Chat (Preview) — Login Screen Preview</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; display:flex; height:100vh; background:#f3f4f6; }
+    #chat { width: 680px; margin: auto; border:1px solid #ddd; display:flex; flex-direction:column; background:#fff; box-shadow:0 4px 12px rgba(0,0,0,0.06); }
+    #history { flex:1; padding:12px; overflow:auto; background:#fafafa; }
+    .msg { margin:8px 0; }
+    .user { text-align:right; color:#003366 }
+    .bot { text-align:left; color:#004400 }
+    #controls { display:flex; padding:10px; border-top:1px solid #eee; align-items:center; gap:8px; }
+    input[type=text]{ flex:1; padding:8px; border:1px solid #ccc; border-radius:4px; }
+    button{ padding:8px 12px; border-radius:4px; border:1px solid #ccc; background:#fff; cursor:pointer; }
+    button:hover{ background:#f7f7f7; }
+    .suggestion{ background:#fff; border:1px solid #ddd; padding:8px; margin-top:6px; border-radius:4px; }
+    .meta { font-size: 0.85em; color: #666; margin-top:4px; }
+    #diagnostics { border-top:1px dashed #eee; padding:10px; font-size:0.9em; color:#333; background:#fcfcfd; }
+    #diagToggle { margin-left:8px; }
+    .label { font-weight:600; margin-right:6px; color:#222; }
+    .small { font-size:0.85em; color:#666; }
+    .row { display:flex; gap:8px; align-items:center; }
+    #rawJson { white-space: pre-wrap; background:#0f1724; color:#dbeafe; padding:8px; border-radius:4px; margin-top:8px; overflow:auto; max-height:220px; }
+    footer { padding:8px 12px; font-size:0.8em; color:#666; text-align:center; border-top:1px solid #eee; }
+    
+    /* Login Screen Styles */
+    #loginScreen { display:flex; justify-content:center; align-items:center; height:100vh; background:#f3f4f6; }
+    .login-container { background:#fff; padding:40px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.1); width:380px; }
+    .login-title { font-size:24px; font-weight:bold; color:#003366; margin-bottom:10px; text-align:center; }
+    .login-subtitle { font-size:14px; color:#666; margin-bottom:30px; text-align:center; }
+    .form-group { margin-bottom:20px; }
+    .form-group label { display:block; font-weight:600; margin-bottom:6px; color:#222; }
+    .form-group input { width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; font-size:14px; }
+    .form-group input:focus { outline:none; border-color:#003366; box-shadow:0 0 4px rgba(0,51,102,0.2); }
+    #loginBtn { width:100%; padding:12px; background:#003366; color:#fff; border:none; border-radius:4px; font-size:16px; font-weight:600; cursor:pointer; }
+    #loginBtn:hover { background:#002244; }
+    #chatContainer { display:none; }
+    
+    /* Guest Header Styles */
+    #guestHeader { background:#003366; color:#fff; padding:15px; display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #002244; }
+    .guest-info { display:flex; gap:20px; align-items:center; }
+    .guest-detail { font-size:14px; }
+    .guest-detail .label { color:#ccc; font-weight:600; }
+    .guest-detail .value { color:#fff; font-size:16px; font-weight:bold; }
+    #logoutBtn { padding:8px 16px; background:#e74c3c; color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600; }
+    #logoutBtn:hover { background:#c0392b; }
+    
+    /* Language Selector */
+    #languageSelector { padding:5px 10px; border:1px solid #ccc; border-radius:4px; font-size:12px; background:#fff; }
+    
+    /* Rating Styles */
+    .rating-container { display:flex; gap:8px; margin-top:8px; align-items:center; }
+    .rating-btn { padding:4px 12px; border:1px solid #ddd; background:#f9f9f9; cursor:pointer; border-radius:4px; font-size:12px; }
+    .rating-btn:hover { background:#f0f0f0; }
+    .rating-btn.selected { background:#003366; color:#fff; border-color:#003366; }
+  </style>
+</head>
+<body>
+  <!-- Login Screen -->
+  <div id="loginScreen">
+    <div class="login-container">
+      <div class="login-title">CityQue Concierge</div>
+      <div class="login-subtitle">Hotel Guest Check-in</div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="guestName">Guest Name</label>
+          <input type="text" id="guestName" name="guestName" placeholder="Enter your full name" required />
+        </div>
+        <div class="form-group">
+          <label for="roomNumber">Room Number</label>
+          <input type="text" id="roomNumber" name="roomNumber" placeholder="Enter your room number" required />
+        </div>
+        <button type="submit" id="loginBtn">Enter Chat</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Chat Screen -->
+  <div id="chatContainer">
+  <div id="chat">
+    <!-- Guest Header -->
+    <div id="guestHeader">
+      <div class="guest-info">
+        <div class="guest-detail">
+          <span class="label">Guest:</span>
+          <span class="value" id="headerGuestName">—</span>
+        </div>
+        <div class="guest-detail">
+          <span class="label">Room:</span>
+          <span class="value" id="headerRoomNumber">—</span>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <label class="small" style="color:#ccc;">
+          Language:
+          <select id="languageSelector">
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="ja">Japanese</option>
+            <option value="zh">Chinese</option>
+          </select>
+        </label>
+        <button id="logoutBtn">Logout</button>
+      </div>
+    </div>
+    
+    <div id="history"></div>
+
+    <div id="controls">
+      <input id="message" placeholder="Ask (e.g., 'Find attractions near San Francisco' or 'What time is check-out?')" />
+      <label class="small"><input type="checkbox" id="shareLocation" /> Share my location</label>
+      <button id="send">Send</button>
+      <label id="diagToggle" class="small"><input type="checkbox" id="showDiag" /> Show Diagnostics</label>
+    </div>
+
+    <div id="diagnostics" style="display:none;">
+      <div class="row"><span class="label">Client-parsed city:</span><span id="clientCity" class="small">—</span></div>
+      <div class="row"><span class="label">Payload coords:</span><span id="payloadCoords" class="small">—</span></div>
+      <div class="row"><span class="label">Server intent:</span><span id="srvIntent" class="small">—</span></div>
+      <div class="row"><span class="label">Server liveLookup:</span><span id="srvLive" class="small">—</span></div>
+      <div class="row"><span class="label">Server reply:</span><span id="srvReply" class="small">—</span></div>
+      <div id="rawJson" style="display:none"></div>
+    </div>
+
+    <!-- Guest Policy Notice -->
+    <div style="background:#f0f8ff; padding:10px; font-size:12px; color:#333; border-top:1px solid #ddd;">
+      <strong>Privacy Notice:</strong> Your interactions are logged for service improvement. By using this service, you agree to our <a href="#" style="color:#003366;">Guest Privacy Policy</a>.
+    </div>
+
+    <footer>AI Concierge — Prototype. Diagnostics show client-side parsing and the server response (intent, liveLookup, raw JSON).</footer>
+  </div>
+  </div>
+
+  <script>
+    // Login functionality
+    const loginScreen = document.getElementById('loginScreen');
+    const chatContainer = document.getElementById('chatContainer');
+    const loginForm = document.getElementById('loginForm');
+    const guestNameInput = document.getElementById('guestName');
+    const roomNumberInput = document.getElementById('roomNumber');
+    
+    let guestInfo = { name: '', roomNumber: '' };
+
+    loginForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const name = guestNameInput.value.trim();
+      const room = roomNumberInput.value.trim();
+      
+      if (!name || !room) {
+        alert('Please fill in all fields');
+        return;
+      }
+      
+      guestInfo = { name, roomNumber: room };
+      loginScreen.style.display = 'none';
+      chatContainer.style.display = 'flex';
+      
+      // Update header with guest info
+      document.getElementById('headerGuestName').innerText = guestInfo.name;
+      document.getElementById('headerRoomNumber').innerText = guestInfo.roomNumber;
+      
+      // Show welcome message with guest info
+      append(`Welcome, ${guestInfo.name}! I have your room number as ${guestInfo.roomNumber}. How can I assist you today?`);
+    });
+
+    // Logout functionality
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      if (confirm('Are you sure you want to logout?')) {
+        loginScreen.style.display = 'flex';
+        chatContainer.style.display = 'none';
+        guestNameInput.value = '';
+        roomNumberInput.value = '';
+        historyEl.innerHTML = '';
+        guestInfo = { name: '', roomNumber: '' };
+      }
+    });
+
+    // Language selector
+    document.getElementById('languageSelector').addEventListener('change', (e) => {
+      const selectedLang = e.target.value;
+      console.log('Language changed to:', selectedLang);
+      // Future: implement translation logic here
+    });
+
+    // Chat functionality
+    const historyEl = document.getElementById('history');
+    const inputEl = document.getElementById('message');
+    const sendBtn = document.getElementById('send');
+    const shareCheckbox = document.getElementById('shareLocation');
+    const showDiag = document.getElementById('showDiag');
+    const diagPanel = document.getElementById('diagnostics');
+    const clientCityEl = document.getElementById('clientCity');
+    const payloadCoordsEl = document.getElementById('payloadCoords');
+    const srvIntentEl = document.getElementById('srvIntent');
+    const srvLiveEl = document.getElementById('srvLive');
+    const srvReplyEl = document.getElementById('srvReply');
+    const rawJsonEl = document.getElementById('rawJson');
+
+    let cachedCoords = null;
+    const sessionId = 'session-' + Math.random().toString(36).slice(2,9);
+
+    function append(text, who='bot') {
+      const d = document.createElement('div');
+      d.className = 'msg ' + (who === 'user' ? 'user' : 'bot');
+      d.innerText = (who === 'user' ? 'You: ' : 'Bot: ') + text;
+      historyEl.appendChild(d);
+      
+      // Add rating buttons for bot responses
+      if (who === 'bot') {
+        const ratingContainer = document.createElement('div');
+        ratingContainer.className = 'rating-container';
+        ratingContainer.innerHTML = `
+          <span class="small">Rate this response:</span>
+          <button class="rating-btn" data-rating="thumbsup" title="Helpful">👍</button>
+          <button class="rating-btn" data-rating="thumbsdown" title="Not helpful">👎</button>
+        `;
+        
+        ratingContainer.querySelectorAll('.rating-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const rating = e.target.dataset.rating;
+            ratingContainer.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+            e.target.classList.add('selected');
+            console.log('Response rated:', rating);
+            // Future: send rating to server for analytics
+          });
+        });
+        
+        historyEl.appendChild(ratingContainer);
+      }
+      
+      historyEl.scrollTop = historyEl.scrollHeight;
+      return d;
+    }
+
+    function appendSuggestion(s) {
+      const el = document.createElement('div');
+      el.className = 'suggestion';
+      el.innerHTML = `<strong>${escapeHtml(s.name)}</strong> <span class="small">(${escapeHtml(s.type)})</span><div class="small">coords: ${escapeHtml(s.lat)}, ${escapeHtml(s.lon)}</div>`;
+      if (s.reason) {
+        const r = document.createElement('div');
+        r.className = 'meta';
+        r.innerText = `Reason: ${s.reason}`;
+        el.appendChild(r);
+      }
+      historyEl.appendChild(el);
+      historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    function parseCityFromText(text) {
+      const m = text.match(/near\s+([a-zA-Z\s,]+)/i);
+      if (!m) return null;
+      const candidate = m[1].trim();
+      const token = candidate.toLowerCase();
+      if (token === 'me' || token === 'here' || token === 'my hotel' || token === 'myhotel') return null;
+      return candidate;
+    }
+
+    async function getBrowserLocation() {
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error('Geolocation not supported'));
+        navigator.geolocation.getCurrentPosition(pos => {
+          resolve({ lat: pos.coords.latitude.toString(), lon: pos.coords.longitude.toString() });
+        }, err => reject(err), { maximumAge: 60000, timeout: 10000 });
+      });
+    }
+
+    showDiag.addEventListener('change', () => {
+      diagPanel.style.display = showDiag.checked ? 'block' : 'none';
+      rawJsonEl.style.display = showDiag.checked ? 'block' : 'none';
+    });
+
+    async function sendMessage(text) {
+      append(text, 'user');
+      const botPlaceholder = append('…', 'bot');
+
+      // Client-side parse for display purposes
+      const clientCity = parseCityFromText(text);
+      clientCityEl.innerText = clientCity || '—';
+
+      // Location/consent handling
+      let consentLocation = false;
+      let coords = null;
+      payloadCoordsEl.innerText = '—';
+      if (shareCheckbox.checked) {
+        consentLocation = true;
+        try {
+          if (!cachedCoords) cachedCoords = await getBrowserLocation();
+          coords = cachedCoords;
+          payloadCoordsEl.innerText = `${coords.lat}, ${coords.lon}`;
+        } catch (err) {
+          shareCheckbox.checked = false;
+          consentLocation = false;
+          payloadCoordsEl.innerText = 'permission denied / unavailable';
+          botPlaceholder.innerText = 'Bot: Could not get browser location (permission denied or timeout). Sending without location.';
+        }
+      }
+
+      // Build payload (do NOT send default SampleCity)
+      const payload = { sessionId, message: text, consentLocation, coords };
+
+      try {
+        const r = await fetch('http://localhost:3000/api/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const json = await r.json();
+
+        // update diagnostics
+        srvIntentEl.innerText = json.intent || '—';
+        srvLiveEl.innerText = json.liveLookup === undefined ? '—' : String(json.liveLookup);
+        srvReplyEl.innerText = json.reply || '—';
+        rawJsonEl.innerText = JSON.stringify(json, null, 2);
+
+        // render bot reply and suggestions
+        botPlaceholder.innerText = 'Bot: ' + (json.reply || 'Sorry, something went wrong.');
+        if (json.suggestions && json.suggestions.length) {
+          const label = document.createElement('div');
+          label.className = 'meta';
+          label.innerText = json.liveLookup ? 'Live suggestions:' : 'Hotel suggestions (live unavailable):';
+          historyEl.appendChild(label);
+          json.suggestions.forEach(s => appendSuggestion(s));
+        }
+      } catch (err) {
+        botPlaceholder.innerText = 'Bot: Error contacting server';
+        rawJsonEl.innerText = String(err && err.message ? err.message : err);
+      }
+    }
+
+    sendBtn.onclick = () => {
+      const t = inputEl.value.trim();
+      if (!t) return;
+      sendMessage(t);
+      inputEl.value = '';
+    };
+
+    inputEl.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendBtn.click();
+    });
+  </script>
+</body>
+</html>

@@ -14,6 +14,7 @@ const FALLBACK_PLACES = JSON.parse(fs.readFileSync('./fallback_places.json', 'ut
 
 const app = express();
 app.use(cors());
+app.use(express.static('.')); // Serve static files from current directory
 app.use(bodyParser.json());
 
 const PORT = process.env.PORT || 3000;
