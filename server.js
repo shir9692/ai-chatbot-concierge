@@ -8,6 +8,7 @@ const fetch = require('node-fetch');
 const cors = require('cors');
 const fs = require('fs');
 const Fuse = require('fuse.js');
+const nodemailer = require('nodemailer');
 
 const qna = JSON.parse(fs.readFileSync('./qna.json', 'utf8'));
 const FALLBACK_PLACES = JSON.parse(fs.readFileSync('./fallback_places.json', 'utf8'));
@@ -21,6 +22,218 @@ const PORT = process.env.PORT || 3000;
 
 // Simple in-memory session tracking for single-active-request enforcement
 const activeRequests = new Map();
+
+// ========== EMAIL CONFIGURATION (Free with Mailtrap) ==========
+// Sign up free at https://mailtrap.io/
+const emailTransporter = nodemailer.createTransport({
+  host: process.env.EMAIL_HOST || 'sandbox.smtp.mailtrap.io',
+  port: process.env.EMAIL_PORT || 2525,
+  auth: {
+    user: process.env.EMAIL_USER || 'user@mailtrap.io',
+    pass: process.env.EMAIL_PASS || 'password'
+  }
+});
+
+// Helper: Send email notifications
+async function sendEmailNotification(to, subject, message) {
+  try {
+    await emailTransporter.sendMail({
+      from: process.env.EMAIL_FROM || 'concierge@hotelcityque.com',
+      to: to,
+      subject: subject,
+      html: `<h2>${subject}</h2><p>${message}</p><br><p>Best regards,<br>CityQue Concierge</p>`
+    });
+    console.log(`Email sent to ${to}`);
+    return true;
+  } catch (err) {
+    console.error('Email send error:', err && err.message ? err.message : err);
+    return false;
+  }
+}
+
+// Helper: Simulate SMS (using free service - Twilio trial or console log)
+async function sendSMSNotification(phoneNumber, message) {
+  try {
+    // For now, log to console (free). To use real SMS:
+    // Install: npm install twilio
+    // Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN env vars
+    console.log(`[SMS] To: ${phoneNumber} | Message: ${message}`);
+    return true;
+  } catch (err) {
+    console.error('SMS send error:', err && err.message ? err.message : err);
+    return false;
+  }
+}
+
+// ========== ENHANCED AI RESPONSE (Free Hugging Face Alternative) ==========
+// Uses Hugging Face Inference API (free tier available)
+async function getEnhancedAIResponse(userMessage, context = '') {
+  try {
+    // Free alternative: Use Hugging Face model
+    // Sign up free at https://huggingface.co/
+    const HF_API_KEY = process.env.HF_API_KEY || '';
+    
+    if (!HF_API_KEY) {
+      // Fallback to basic response if no API key
+      return null;
+    }
+
+    const response = await fetch('https://api-inference.huggingface.co/models/gpt2', {
+      headers: { Authorization: `Bearer ${HF_API_KEY}` },
+      method: 'POST',
+      body: JSON.stringify({ 
+        inputs: `${context}\nGuest: ${userMessage}\nConcierge:`,
+        parameters: { max_length: 100 }
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Hugging Face API error:', response.status);
+      return null;
+    }
+
+    const result = await response.json();
+    if (result && result[0] && result[0].generated_text) {
+      return result[0].generated_text;
+    }
+    return null;
+  } catch (err) {
+    console.error('AI enhancement error:', err && err.message ? err.message : err);
+    return null;
+  }
+}
+
+// ========== YELP API INTEGRATION (Free with API Key) ==========
+// Sign up free at https://www.yelp.com/developers
+// Rate limit: 5,000 calls/day (free tier)
+async function searchYelp(category, location, limit = 5) {
+  try {
+    const yelpApiKey = process.env.YELP_API_KEY;
+    if (!yelpApiKey) {
+      console.log('Yelp API key not set (YELP_API_KEY env var)');
+      return [];
+    }
+
+    const searchUrl = 'https://api.yelp.com/v3/businesses/search';
+    const params = new URLSearchParams({
+      term: category,
+      location: location,
+      limit: Math.min(limit, 20),
+      sort_by: 'rating'
+    });
+
+    const response = await fetch(`${searchUrl}?${params}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${yelpApiKey}`,
+        'Accept': 'application/json',
+        'User-Agent': 'ai-concierge-mvp/0.1'
+      },
+      timeout: 5000
+    });
+
+    if (!response.ok) {
+      console.error('Yelp API error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    if (!data.businesses || data.businesses.length === 0) return [];
+
+    return data.businesses.map(b => ({
+      name: b.name,
+      type: b.categories.map(c => c.title).join(', '),
+      rating: b.rating,
+      reviewCount: b.review_count,
+      phone: b.phone || 'N/A',
+      address: b.location.display_address.join(', '),
+      url: b.url,
+      imageUrl: b.image_url
+    }));
+  } catch (err) {
+    console.error('Yelp search error:', err && err.message ? err.message : err);
+    return [];
+  }
+}
+
+// ========== EVENTBRITE API INTEGRATION (Free with API Key) ==========
+// Sign up free at https://www.eventbrite.com/platform/api
+// Rate limit: 1,000 requests/hour (free tier)
+async function searchEventbrite(keyword, city, limit = 5) {
+  try {
+    const ebApiKey = process.env.EVENTBRITE_API_KEY;
+    if (!ebApiKey) {
+      console.log('Eventbrite API key not set (EVENTBRITE_API_KEY env var)');
+      return [];
+    }
+
+    // First, get location ID for the city
+    const locationUrl = 'https://www.eventbriteapi.com/v3/locations/search';
+    const locationParams = new URLSearchParams({ keyword: city });
+
+    const locationRes = await fetch(`${locationUrl}?${locationParams}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${ebApiKey}`,
+        'User-Agent': 'ai-concierge-mvp/0.1'
+      },
+      timeout: 5000
+    });
+
+    if (!locationRes.ok) {
+      console.error('Eventbrite location search error:', locationRes.status);
+      return [];
+    }
+
+    const locationData = await locationRes.json();
+    if (!locationData.locations || locationData.locations.length === 0) {
+      console.log('No location found for:', city);
+      return [];
+    }
+
+    const locationId = locationData.locations[0].id;
+
+    // Now search events in that location
+    const eventsUrl = 'https://www.eventbriteapi.com/v3/events/search';
+    const eventsParams = new URLSearchParams({
+      q: keyword,
+      'location.address': city,
+      'sort_by': 'best',
+      'page_size': Math.min(limit, 50),
+      'expand': 'organizer,venue'
+    });
+
+    const eventsRes = await fetch(`${eventsUrl}?${eventsParams}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${ebApiKey}`,
+        'User-Agent': 'ai-concierge-mvp/0.1'
+      },
+      timeout: 5000
+    });
+
+    if (!eventsRes.ok) {
+      console.error('Eventbrite events search error:', eventsRes.status);
+      return [];
+    }
+
+    const eventsData = await eventsRes.json();
+    if (!eventsData.events || eventsData.events.length === 0) return [];
+
+    return eventsData.events.map(e => ({
+      name: e.name.text,
+      startTime: e.start.local || 'TBA',
+      endTime: e.end.local || 'TBA',
+      description: e.description?.text?.substring(0, 200) || 'No description',
+      location: e.venue?.name || 'Virtual/TBA',
+      url: e.url,
+      eventId: e.id
+    }));
+  } catch (err) {
+    console.error('Eventbrite search error:', err && err.message ? err.message : err);
+    return [];
+  }
+}
 
 // --- fuzzy QnA (Fuse.js) setup with improved matching and debug logging ---
 const fuseOptions = {
@@ -328,7 +541,7 @@ function detectIntent(text) {
 
 app.post('/api/message', async (req, res) => {
   try {
-    const { sessionId = 'anon', message = '', consentLocation = false, coords, city } = req.body;
+    const { sessionId = 'anon', message = '', consentLocation = false, coords, city, guestEmail, guestPhone } = req.body;
 
     if (activeRequests.get(sessionId)) {
       return res.json({ reply: "I'm processing your previous request. Please wait a moment before sending another.", queued: false });
@@ -349,7 +562,30 @@ app.post('/api/message', async (req, res) => {
       if (/order|room service|reserve|reservation/.test(message.toLowerCase())) {
         reply = 'I can help with room service or reservations — do you want to order now or make a reservation? Please tell me dish or cuisine and party size.';
       } else {
-        reply = 'What kind of food are you looking for (cuisine, budget, or dietary needs)?';
+        // Try to get dining recommendations from Yelp
+        const cityFromMessage = extractCityFromMessage(message);
+        const searchCity = cityFromMessage || city || 'nearby';
+        
+        // Extract cuisine type from message
+        const cuisineMatch = message.match(/looking for|want|craving|recommend|best (\w+ )?(\w+)/i);
+        const cuisineType = cuisineMatch ? cuisineMatch[2] || 'restaurants' : 'restaurants';
+        
+        if (process.env.YELP_API_KEY) {
+          const yelpResults = await searchYelp(cuisineType, searchCity, 5);
+          if (yelpResults && yelpResults.length > 0) {
+            reply = `I found ${yelpResults.length} great dining options for you:\n`;
+            suggestions = yelpResults;
+            for (let i = 0; i < Math.min(3, yelpResults.length); i++) {
+              const r = yelpResults[i];
+              reply += `\n${i+1}. **${r.name}** (${r.rating}⭐ • ${r.reviewCount} reviews)\n   📍 ${r.address}\n   📞 ${r.phone}`;
+            }
+            liveLookup = true;
+          } else {
+            reply = 'What kind of food are you looking for (cuisine, budget, or dietary needs)?';
+          }
+        } else {
+          reply = 'What kind of food are you looking for (cuisine, budget, or dietary needs)?';
+        }
       }
     } else if (intent === 'local_attractions') {
       const cityFromMessage = extractCityFromMessage(message);
@@ -363,14 +599,34 @@ app.post('/api/message', async (req, res) => {
         console.log('City from payload:', city);
         console.log('Search area chosen:', searchArea);
 
+        // Check if user is interested in events
+        const isEventSearch = /event|concert|show|festival|exhibition|conference|meetup/i.test(message);
+        
+        let eventResults = [];
+        if (isEventSearch && process.env.EVENTBRITE_API_KEY && typeof searchArea === 'string') {
+          eventResults = await searchEventbrite('events', searchArea, 5);
+        }
+
         const result = await findPlaces(searchArea, 'tourist attraction');
-        liveLookup = result.live;
+        liveLookup = result.live || eventResults.length > 0;
+        
+        if (eventResults && eventResults.length > 0) {
+          reply = `I found ${eventResults.length} upcoming events in ${searchArea}:\n`;
+          suggestions = eventResults;
+          for (let i = 0; i < Math.min(3, eventResults.length); i++) {
+            const e = eventResults[i];
+            reply += `\n${i+1}. **${e.name}**\n   📅 ${e.startTime}\n   📍 ${e.location}`;
+          }
+          reply += '\n\n';
+        }
+
         if (result.places && result.places.length) {
-          reply = result.live
+          reply += result.live
             ? `Here are the top ${result.places.length} nearby attractions:`
             : "I couldn't fetch live attraction data right now — here are general suggestions instead.";
-          suggestions = result.places;
-        } else {
+          if (!suggestions) suggestions = result.places;
+          else if (Array.isArray(suggestions)) suggestions = [...suggestions, ...result.places];
+        } else if (!eventResults.length) {
           reply = "I couldn't find live attraction data right now. Would you like general suggestions instead?";
         }
       }
@@ -388,7 +644,23 @@ app.post('/api/message', async (req, res) => {
     } else {
       // Try QnA as a last-ditch before asking to clarify
       const qnaAns = answerFromQnA(message);
-      reply = qnaAns || "I’m not sure I understood. Could you please rephrase or tell me one detail (e.g., city or room number)?";
+      reply = qnaAns || "I'm not sure I understood. Could you please rephrase or tell me one detail (e.g., city or room number)?";
+    }
+
+    // ========== TRY TO ENHANCE WITH AI IF AVAILABLE ==========
+    if (process.env.HF_API_KEY && !suggestions) {
+      const enhancedReply = await getEnhancedAIResponse(message, `Previous response: ${reply}`);
+      if (enhancedReply && enhancedReply.length > reply.length) {
+        reply = enhancedReply.split('Concierge:')[1]?.trim() || reply;
+      }
+    }
+
+    // ========== SEND NOTIFICATIONS IF REQUESTED ==========
+    if (guestEmail && (intent === 'dining' || intent === 'transport')) {
+      sendEmailNotification(guestEmail, 'CityQue Concierge Assistance', reply);
+    }
+    if (guestPhone && intent === 'transport') {
+      sendSMSNotification(guestPhone, `CityQue: ${reply.substring(0, 160)}`);
     }
 
     activeRequests.delete(sessionId);
